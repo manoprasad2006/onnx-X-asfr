@@ -1,23 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>TensorFlow.js Model</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Model Inference</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        #video-container {
+            position: relative;
+            max-width: 640px;
+            width: 100%;
+        }
+        #video-feed {
+            max-width: 100%;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+        }
+        #prediction {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <script>
-    import * as tf from '@tensorflow/tfjs';
+    <h1>Live Model Inference</h1>
+    <div id="video-container">
+        <!-- Video Feed -->
+        <video id="video-feed" autoplay></video>
+        <!-- Prediction Output -->
+        <div id="prediction">Prediction: Waiting...</div>
+    </div>
 
-    async function loadAndUseModel() {
-      const model = await tf.loadGraphModel('http://127.0.0.1:8080/saved_model_directory/');
-      // Use the model for inference
-      const input = tf.tensor([[/* your input data */]]);
-      const prediction = await model.predict(input);
-      console.log('Prediction:', prediction.dataSync());
-    }
+    <script>
+        // Get the video element
+        const videoElement = document.getElementById('video-feed');
+        const predictionEl = document.getElementById('prediction');
 
-    loadAndUseModel();
-  </script>
+        // Access the user's webcam
+        async function startWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                predictionEl.textContent = "Error accessing webcam.";
+            }
+        }
+
+        // Capture video frame and send it to the server for inference
+        async function sendFrameToServer() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const width = videoElement.videoWidth;
+            const height = videoElement.videoHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw current frame to canvas
+            context.drawImage(videoElement, 0, 0, width, height);
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            // Send the captured frame to the backend for inference
+            try {
+                const response = await fetch('http://your-cloud-server-url/inference', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: imageData }),
+                });
+
+                const data = await response.json();
+                // Display prediction result
+                predictionEl.textContent = `Prediction: ${data.label} (${data.confidence.toFixed(4)})`;
+                predictionEl.style.color = data.label === 'spoof' ? 'red' : 'green';
+            } catch (error) {
+                console.error('Error sending frame to server:', error);
+                predictionEl.textContent = "Error processing frame.";
+            }
+        }
+
+        // Start the webcam and fetch predictions
+        startWebcam();
+
+        // Capture a frame and send it every 1 second
+        setInterval(sendFrameToServer, 1000);
+    </script>
 </body>
 </html>

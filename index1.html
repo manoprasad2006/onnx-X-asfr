@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>TensorFlow.js Model</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js"></script>
+</head>
+<body>
+  <script>
+    import * as tf from '@tensorflow/tfjs';
+
+    async function loadAndUseModel() {
+      const model = await tf.loadGraphModel('http://127.0.0.1:8080/saved_model_directory/');
+      // Use the model for inference
+      const input = tf.tensor([[/* your input data */]]);
+      const prediction = await model.predict(input);
+      console.log('Prediction:', prediction.dataSync());
+    }
+
+    loadAndUseModel();
+  </script>
+</body>
+</html>
